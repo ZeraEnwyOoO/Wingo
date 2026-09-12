@@ -1,6 +1,6 @@
  /*
- * Wingo — P2P Internet Sharing Tool
- * Copyright (C) 2024 Wingo Project
+ * Wingo — P2P Internet Sharing Tool (Repo: Bowie)
+ * Copyright (C) 2024 ASBM Team
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@
  *   - Utility macros
  *   - Compiler attributes
  *   - Endianness helpers
+ *   - Error codes (via error.h)
  *
  * ============================================================================
  */
@@ -44,7 +45,7 @@
 #define WINGO_VERSION_MINOR     1
 #define WINGO_VERSION_PATCH     0
 #define WINGO_VERSION_STRING    "0.1.0"
-#define WINGO_NAME              "Wingo"
+#define WINGO_NAME              "Bowie"
 #define WINGO_DESCRIPTION       "P2P Internet Sharing Tool"
 
 /* ============================================================================
@@ -72,7 +73,6 @@
 
 /*
  * Fixed-width integer types for network and crypto operations.
- * These are aliases for stdint.h types for consistency.
  */
 
 typedef uint8_t     wingo_u8;
@@ -93,7 +93,7 @@ typedef size_t      wingo_size;
 typedef ptrdiff_t   wingo_ssize;
 
 /*
- * Boolean type (C11 has stdbool.h, but we alias for consistency).
+ * Boolean type.
  */
 
 typedef bool        wingo_bool;
@@ -178,7 +178,7 @@ typedef wingo_id wingo_info_hash;
 #define WINGO_ARRAY_SIZE(arr)   (sizeof(arr) / sizeof((arr)[0]))
 
 /*
- * Unused parameter (to silence compiler warnings).
+ * Unused parameter.
  */
 
 #define WINGO_UNUSED(x)         ((void)(x))
@@ -255,10 +255,6 @@ typedef wingo_id wingo_info_hash;
 
 #if defined(__GNUC__) || defined(__clang__)
 
-/*
- * Function attributes.
- */
-
 #define WINGO_ATTR_FORMAT(fmt, args) \
     __attribute__((format(printf, fmt, args)))
 
@@ -306,10 +302,6 @@ typedef wingo_id wingo_info_hash;
 
 #else
 
-/*
- * Fallback for non-GCC/Clang compilers.
- */
-
 #define WINGO_ATTR_FORMAT(fmt, args)
 #define WINGO_ATTR_NORETURN
 #define WINGO_ATTR_UNUSED
@@ -333,17 +325,8 @@ typedef wingo_id wingo_info_hash;
  * STATIC ASSERT (C11)
  * ============================================================================ */
 
-/*
- * Compile-time assertion.
- * Usage: WINGO_STATIC_ASSERT(sizeof(int) == 4, int_must_be_4_bytes);
- */
-
 #define WINGO_STATIC_ASSERT(cond, msg) \
     _Static_assert(cond, #msg)
-
-/*
- * Assert sizes of basic types.
- */
 
 WINGO_STATIC_ASSERT(sizeof(wingo_u8) == 1, wingo_u8_must_be_1_byte);
 WINGO_STATIC_ASSERT(sizeof(wingo_u16) == 2, wingo_u16_must_be_2_bytes);
@@ -361,10 +344,6 @@ WINGO_STATIC_ASSERT(sizeof(wingo_id) == WINGO_ID_SIZE, wingo_id_must_be_20_bytes
  * ENDIANNESS HELPERS
  * ============================================================================ */
 
-/*
- * Detect endianness at compile time.
- */
-
 #if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__)
     #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
         #define WINGO_LITTLE_ENDIAN  1
@@ -378,10 +357,6 @@ WINGO_STATIC_ASSERT(sizeof(wingo_id) == WINGO_ID_SIZE, wingo_id_must_be_20_bytes
 #else
     #error "Cannot detect endianness"
 #endif
-
-/*
- * Byte swap functions (inline).
- */
 
 static inline wingo_u16 wingo_bswap16(wingo_u16 x)
 {
@@ -408,10 +383,6 @@ static inline wingo_u64 wingo_bswap64(wingo_u64 x)
            ((x >> 56) & 0x00000000000000FFULL);
 }
 
-/*
- * Host to network byte order.
- */
-
 #if WINGO_LITTLE_ENDIAN
 
 #define wingo_htons(x)  wingo_bswap16(x)
@@ -422,7 +393,7 @@ static inline wingo_u64 wingo_bswap64(wingo_u64 x)
 #define wingo_ntohl(x)  wingo_bswap32(x)
 #define wingo_ntohll(x) wingo_bswap64(x)
 
-#else /* Big endian */
+#else
 
 #define wingo_htons(x)  (x)
 #define wingo_htonl(x)  (x)
@@ -438,65 +409,33 @@ static inline wingo_u64 wingo_bswap64(wingo_u64 x)
  * COMMON CONSTANTS
  * ============================================================================ */
 
-/*
- * Network constants.
- */
-
 #define WINGO_MAX_PACKET_SIZE       65535
 #define WINGO_MTU                   1500
 #define WINGO_MIN_MTU               576
-
-/*
- * Time constants (in seconds).
- */
 
 #define WINGO_SECOND                1
 #define WINGO_MINUTE                60
 #define WINGO_HOUR                  3600
 #define WINGO_DAY                   86400
 
-/*
- * Time constants (in milliseconds).
- */
-
 #define WINGO_MS_PER_SECOND         1000
 #define WINGO_MS_PER_MINUTE         60000
 #define WINGO_MS_PER_HOUR           3600000
 
-/*
- * Time constants (in microseconds).
- */
-
 #define WINGO_US_PER_SECOND         1000000
 #define WINGO_US_PER_MILLISECOND    1000
-
-/*
- * Buffer sizes.
- */
 
 #define WINGO_SMALL_BUFFER          256
 #define WINGO_MEDIUM_BUFFER         1024
 #define WINGO_LARGE_BUFFER          4096
 #define WINGO_HUGE_BUFFER           65536
 
-/*
- * String sizes.
- */
-
 #define WINGO_MAX_PATH              4096
 #define WINGO_MAX_HOSTNAME          256
-#define WINGO_MAX_IP_STRING         46  /* IPv6 max: 45 chars + null */
-
-/*
- * Peer constants.
- */
+#define WINGO_MAX_IP_STRING         46
 
 #define WINGO_MAX_PEERS             256
 #define WINGO_MAX_CONNECTIONS       64
-
-/*
- * DHT constants.
- */
 
 #define WINGO_DHT_BUCKET_SIZE       8
 #define WINGO_DHT_MAX_BUCKETS       160
@@ -506,29 +445,17 @@ static inline wingo_u64 wingo_bswap64(wingo_u64 x)
  * COMMON ENUMS
  * ============================================================================ */
 
-/*
- * Address family.
- */
-
 typedef enum {
     WINGO_AF_UNSPEC = 0,
-    WINGO_AF_INET   = 2,    /* IPv4 */
-    WINGO_AF_INET6  = 10,   /* IPv6 */
+    WINGO_AF_INET   = 2,
+    WINGO_AF_INET6  = 10,
 } wingo_af_t;
 
-/*
- * Socket type.
- */
-
 typedef enum {
-    WINGO_SOCK_STREAM   = 1,    /* TCP */
-    WINGO_SOCK_DGRAM    = 2,    /* UDP */
-    WINGO_SOCK_RAW      = 3,    /* Raw */
+    WINGO_SOCK_STREAM   = 1,
+    WINGO_SOCK_DGRAM    = 2,
+    WINGO_SOCK_RAW      = 3,
 } wingo_sock_type_t;
-
-/*
- * Protocol.
- */
 
 typedef enum {
     WINGO_IPPROTO_TCP   = 6,
@@ -539,8 +466,10 @@ typedef enum {
 
 /*
  * Return codes.
+ *
+ * NOTE: Do NOT duplicate values. If you need more, add new ones
+ * with unique values.
  */
-
 typedef enum {
     WINGO_OK        =  0,
     WINGO_ERROR     = -1,
@@ -552,75 +481,47 @@ typedef enum {
     WINGO_NOTFOUND  = -7,
     WINGO_EXISTS    = -8,
     WINGO_PERM      = -9,
-    WINGO_AGAIN     = -10,  /* Duplicate, kept for clarity */
 } wingo_rc_t;
 
 /* ============================================================================
  * COMMON STRUCTURES
  * ============================================================================ */
 
-/*
- * Time value (seconds + microseconds).
- */
-
 typedef struct {
-    wingo_i64 sec;      /* Seconds */
-    wingo_i64 usec;     /* Microseconds (0-999999) */
+    wingo_i64 sec;
+    wingo_i64 usec;
 } wingo_time_t;
-
-/*
- * Buffer (data + length + capacity).
- */
 
 typedef struct {
     wingo_u8   *data;
     wingo_size  len;
     wingo_size  cap;
+    wingo_size  read;
 } wingo_buf_t;
 
 /* ============================================================================
  * HELPER FUNCTIONS (INLINE)
  * ============================================================================ */
 
-/*
- * Zero a structure.
- */
-
 static inline void wingo_zero(void *ptr, wingo_size size)
 {
     memset(ptr, 0, size);
 }
-
-/*
- * Copy memory.
- */
 
 static inline void wingo_memcpy(void *dst, const void *src, wingo_size size)
 {
     memcpy(dst, src, size);
 }
 
-/*
- * Compare memory.
- */
-
 static inline int wingo_memcmp(const void *a, const void *b, wingo_size size)
 {
     return memcmp(a, b, size);
 }
 
-/*
- * Compare IDs.
- */
-
 static inline int wingo_id_cmp(const wingo_id *a, const wingo_id *b)
 {
     return memcmp(a->bytes, b->bytes, WINGO_ID_SIZE);
 }
-
-/*
- * Check if ID is zero.
- */
 
 static inline bool wingo_id_is_zero(const wingo_id *id)
 {
@@ -628,19 +529,10 @@ static inline bool wingo_id_is_zero(const wingo_id *id)
     return memcmp(id->bytes, zero, WINGO_ID_SIZE) == 0;
 }
 
-/*
- * Copy ID.
- */
-
 static inline void wingo_id_copy(wingo_id *dst, const wingo_id *src)
 {
     memcpy(dst->bytes, src->bytes, WINGO_ID_SIZE);
 }
-
-/*
- * Convert ID to hex string.
- * Buffer must be at least WINGO_ID_HEX_SIZE bytes.
- */
 
 static inline void wingo_id_to_hex(const wingo_id *id, char *out)
 {
@@ -651,6 +543,22 @@ static inline void wingo_id_to_hex(const wingo_id *id, char *out)
     }
     out[WINGO_ID_SIZE * 2] = '\0';
 }
+
+/* ============================================================================
+ * ERROR CODES (via error.h)
+ * ============================================================================ */
+
+/*
+ * Include error.h at the END of common.h.
+ *
+ * This is necessary because error.h includes common.h for types.
+ * By including it here, any file that includes common.h will
+ * automatically get the error codes too.
+ *
+ * We use a guard to prevent infinite recursion:
+ *   common.h -> error.h -> common.h (guard prevents re-entry)
+ */
+#include "wingo/error.h"
 
 /* ============================================================================
  * END OF HEADER
